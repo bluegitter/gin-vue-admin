@@ -2,9 +2,10 @@ package middleware
 
 import (
 	"errors"
-	"github.com/golang-jwt/jwt/v4"
 	"strconv"
 	"time"
+
+	"github.com/golang-jwt/jwt/v4"
 
 	"github.com/flipped-aurora/gin-vue-admin/server/utils"
 
@@ -19,9 +20,17 @@ import (
 
 var jwtService = service.ServiceGroupApp.SystemServiceGroup.JwtService
 
+func NoAuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 该中间件不做任何处理，直接跳过
+		c.Next()
+	}
+}
+
 func JWTAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 我们这里jwt鉴权取头部信息 x-token 登录时回返回token信息 这里前端需要把token存储到cookie或者本地localStorage中 不过需要跟后端协商过期时间 可以约定刷新令牌或者重新登录
+
 		token := c.Request.Header.Get("x-token")
 		if token == "" {
 			response.FailWithDetailed(gin.H{"reload": true}, "未登录或非法访问", c)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"github.com/gorilla/websocket"
 )
 
 type DockerService struct{}
@@ -171,4 +173,58 @@ func isPortAvailable(port int) bool {
 	}
 	conn.Close()
 	return true
+}
+
+func MakeWebSocketConnection(conn *websocket.Conn, containerID string) {
+	defer conn.Close()
+
+	execConfig := types.ExecConfig{
+		AttachStdin:  true,
+		AttachStdout: true,
+		AttachStderr: true,
+		Tty:          true,
+		Cmd:          []string{"/bin/bash"},
+	}
+
+	exec, err := cli.ContainerExecCreate(context.Background(), containerID, execConfig)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	attach := types.ExecStartCheck{
+		Tty: true,
+	}
+
+	resp, err := cli.ContainerExecAttach(context.Background(), exec.ID, attach)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer resp.Close()
+
+	go func() {
+		for {
+			_, r, err := conn.NextReader()
+			if err != nil {
+				break
+			}
+			_, err = io.Copy(resp.Conn, r)
+			if err != nil {
+				break
+			}
+		}
+	}()
+
+	buf := make([]byte, 1024)
+	for {
+		n, err := resp.Reader.Read(buf)
+		if err != nil {
+			break
+		}
+		err = conn.WriteMessage(websocket.TextMessage, buf[:n])
+		if err != nil {
+			break
+		}
+	}
+
 }
