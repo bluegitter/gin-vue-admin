@@ -105,6 +105,7 @@ import {
 } from "@/api/docker";
 import DockerConsoleDialog from "@/components/docker/DockerConsoleDialog.vue";
 import { onMounted, reactive, ref, nextTick } from "vue";
+import { ElMessage, ElMessageBox } from "element-plus";
 
 const containers = reactive([]);
 let dialogVisible = reactive(false);
@@ -183,20 +184,18 @@ const fetchAndUpdateContainers = async () => {
 };
 
 const handleStartContainer = async (containerID) => {
-  loading = true; // 显示遮罩
   let resp = await startContainer(containerID);
+  ElMessage.info("Container instance started.");
   fetchAndUpdateContainers(); // 调用新方法以重新加载数据
-  loading = false; // 取消遮罩
 };
 
 const handleStopContainer = async (containerID) => {
   let resp = await stopContainer(containerID);
   fetchAndUpdateContainers(); // 调用新方法以重新加载数据
-  loading = false; // 取消遮罩
 };
 
 const handleRemoveContainer = async (containerID) => {
-  $confirm("Are you sure to delete this container?", "Warning", {
+  ElMessageBox.confirm("Are you sure to delete this container?", "Warning", {
     confirmButtonText: "Yes",
     cancelButtonText: "Cancel",
     type: "warning",
@@ -205,11 +204,10 @@ const handleRemoveContainer = async (containerID) => {
       // 使用异步函数
       let resp = await removeContainer(containerID);
       fetchAndUpdateContainers();
-      loading = false;
-      $message.info("Container instance deleted.");
+      ElMessage.info("Container instance deleted.");
     })
     .catch(() => {
-      $message.info("Deletion cancelled.");
+      ElMessage.info("Deletion cancelled.");
     });
 };
 
